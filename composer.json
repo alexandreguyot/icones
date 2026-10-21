@@ -1,0 +1,45 @@
+{
+    "name": "alexandreguyot/icones",
+    "description": "Bibliothèque d'icônes personnelle, noms en français, pour Laravel (Blade).",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Alexandre Guyot"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "blade-ui-kit/blade-icons": "^1.6",
+        "illuminate/support": "^10.0|^11.0|^12.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0|^10.0",
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "AlexandreGuyot\\Icones\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AlexandreGuyot\\Icones\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "AlexandreGuyot\\Icones\\IconesServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "catalogue": "php outils/catalogue.php"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable"
+}
