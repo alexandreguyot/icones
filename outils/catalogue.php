@@ -17,45 +17,31 @@ $racine = dirname(__DIR__);
 $sources = require __DIR__.'/sources.php';
 $version = trim((string) @shell_exec('git -C '.escapeshellarg($racine).' describe --tags --always 2>/dev/null')) ?: 'dev';
 
-$origine = [];
-foreach ($sources['lucide'] as $nom => $chez) {
-    $origine[$nom] = ['lucide', $chez];
-}
-foreach ($sources['simple-icons'] as $nom => $chez) {
-    $origine[$nom] = ['marque', $chez];
-}
-
-$tuiles = [];
-$compte = ['maison' => 0, 'lucide' => 0, 'marque' => 0];
-$fichiers = glob("{$racine}/resources/svg/*.svg") ?: [];
-sort($fichiers);
-
-foreach ($fichiers as $fichier) {
-    $nom = basename($fichier, '.svg');
-    [$source, $chez] = $origine[$nom] ?? ['maison', ''];
-    $compte[$source]++;
-
-    $svg = preg_replace('/^<svg /', '<svg aria-hidden="true" ', trim((string) file_get_contents($fichier)));
-    $cles = htmlspecialchars(trim("{$nom} {$chez}"), ENT_QUOTES);
-    $titre = $chez !== '' ? " title=\"{$chez}\"" : '';
-
-    $tuiles[$source][] = "<button type=\"button\" class=\"tuile\" data-nom=\"{$nom}\" data-cles=\"{$cles}\"{$titre}>"
-        ."{$svg}<span class=\"nom\">{$nom}</span></button>";
-}
-
+$compte = ['ici' => 0, 'lucide' => 0, 'marque' => 0];
 $sections = '';
-foreach ([
-    'maison' => ['Dessinées ici', 'Le basket et ce que les autres bibliothèques n\'ont pas.'],
-    'lucide' => ['Lucide', 'Empruntées à Lucide (ISC), renommées en français. Survolez pour voir le nom d\'origine.'],
-    'marque' => ['Marques', 'Logos en aplat (Simple Icons, CC0). On ne les redessine pas.'],
-] as $source => [$titre, $legende]) {
-    if (empty($tuiles[$source])) {
-        continue;
+
+foreach ($sources as $theme => $icones) {
+    $tuiles = '';
+    foreach ($icones as $nom => $origine) {
+        $fichier = "{$racine}/resources/svg/{$nom}.svg";
+        if (! is_file($fichier)) {
+            continue;
+        }
+
+        [$chez, $sous] = array_pad(explode(':', $origine, 2), 2, '');
+        $source = ['ici' => 'ici', 'lucide' => 'lucide', 'simple-icons' => 'marque'][$chez];
+        $compte[$source]++;
+
+        $svg = preg_replace('/^<svg /', '<svg aria-hidden="true" ', trim((string) file_get_contents($fichier)));
+        $cles = htmlspecialchars(trim("{$nom} {$sous}"), ENT_QUOTES);
+        $titre = $sous !== '' ? " title=\"{$sous}\"" : '';
+
+        $tuiles .= "<button type=\"button\" class=\"tuile\" data-nom=\"{$nom}\" data-source=\"{$source}\" data-cles=\"{$cles}\"{$titre}>"
+            ."{$svg}<span class=\"nom\">{$nom}</span></button>";
     }
 
-    $sections .= "<section class=\"groupe\" data-source=\"{$source}\">"
-        ."<header><h2>{$titre} <span class=\"nb\">".count($tuiles[$source])."</span></h2><p>{$legende}</p></header>"
-        .'<div class="grille">'.implode('', $tuiles[$source]).'</div></section>';
+    $sections .= '<section class="groupe"><header><h2>'.htmlspecialchars($theme).' <span class="nb">'.count($icones).'</span></h2></header>'
+        ."<div class=\"grille\">{$tuiles}</div></section>";
 }
 
 $total = array_sum($compte);
@@ -148,6 +134,7 @@ h2 { font: 400 22px/1.1 var(--titre); text-transform: uppercase; letter-spacing:
   transition: border-color .12s, color .12s;
 }
 .tuile:hover { border-color: var(--accent); color: var(--accent); }
+.tuile[data-source="ici"] { background: var(--accent-doux); }
 .tuile svg { width: var(--taille); height: var(--taille); flex: none; }
 .nom {
   font: 12px var(--code); color: var(--doux); max-width: 100%;
@@ -172,6 +159,7 @@ h2 { font: 400 22px/1.1 var(--titre); text-transform: uppercase; letter-spacing:
     <span>Blade : <code>&lt;x-ico-<i>nom</i> class="h-5 w-5" /&gt;</code></span>
     <span>ou <code>@svg('ico-<i>nom</i>', 'h-5 w-5')</code></span>
     <span>Un clic copie le composant.</span>
+    <span>Fond orangé : dessinée ici.</span>
   </div>
 
   <div class="outils" role="search">
@@ -179,7 +167,7 @@ h2 { font: 400 22px/1.1 var(--titre); text-transform: uppercase; letter-spacing:
     <input id="recherche" type="search" placeholder="Chercher (calendrier, trash, ballon…)" autocomplete="off">
     <div class="puces" role="group" aria-label="Origine">
       <button type="button" class="puce" data-filtre="" aria-pressed="true">Toutes</button>
-      <button type="button" class="puce" data-filtre="maison" aria-pressed="false">Ici {$compte['maison']}</button>
+      <button type="button" class="puce" data-filtre="ici" aria-pressed="false">Dessinées ici {$compte['ici']}</button>
       <button type="button" class="puce" data-filtre="lucide" aria-pressed="false">Lucide {$compte['lucide']}</button>
       <button type="button" class="puce" data-filtre="marque" aria-pressed="false">Marques {$compte['marque']}</button>
     </div>
@@ -208,10 +196,9 @@ h2 { font: 400 22px/1.1 var(--titre); text-transform: uppercase; letter-spacing:
     const q = champ.value.trim().toLowerCase();
     let visibles = 0;
     groupes.forEach(g => {
-      const ouvert = !filtre || g.dataset.source === filtre;
       let n = 0;
       g.querySelectorAll('.tuile').forEach(t => {
-        const ok = ouvert && (!q || t.dataset.cles.includes(q));
+        const ok = (!filtre || t.dataset.source === filtre) && (!q || t.dataset.cles.includes(q));
         t.hidden = !ok;
         if (ok) n++;
       });
@@ -268,4 +255,4 @@ file_put_contents(
     ."</head>\n<body>\n{$page}\n</body>\n</html>\n",
 );
 
-echo "Catalogue : {$total} icônes ({$compte['maison']} ici, {$compte['lucide']} Lucide, {$compte['marque']} marques).\n";
+echo "Catalogue : {$total} icônes ({$compte['ici']} ici, {$compte['lucide']} Lucide, {$compte['marque']} marques).\n";

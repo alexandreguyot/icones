@@ -18,7 +18,16 @@ if (! is_dir((string) $dossierLucide) || ! is_dir((string) $dossierMarques)) {
     exit(1);
 }
 
-$sources = require __DIR__.'/sources.php';
+// Le thème ne sert qu'au catalogue : ici, seule l'origine compte.
+$sources = ['lucide' => [], 'simple-icons' => []];
+foreach (require __DIR__.'/sources.php' as $icones) {
+    foreach ($icones as $nom => $origine) {
+        if ($origine !== 'ici') {
+            [$chez, $sous] = explode(':', $origine, 2);
+            $sources[$chez][$nom] = $sous;
+        }
+    }
+}
 $cible = dirname(__DIR__).'/resources/svg';
 $manques = [];
 

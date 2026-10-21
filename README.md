@@ -58,7 +58,8 @@ vérifie fichier par fichier, et la CI refuse une icône qui s'en écarte.
 - **Grille** : `viewBox="0 0 24 24"`, sans `width` ni `height`.
 - **Trait** : `fill="none"`, `stroke="currentColor"`, `stroke-width="2"`, avec
   extrémités et jonctions arrondies. Les attributs se posent sur `<svg>`, jamais
-  sur un élément enfant.
+  sur un élément enfant. Seule exception : un petit point plein
+  (`fill="currentColor"`) dans une icône au trait.
 - **Aplat** (marques seulement) : `fill="currentColor"`.
 - **Aucune couleur en dur.** Une couleur fixe ne suit plus le thème du club.
 - **Seulement des formes** : `path`, `circle`, `line`, `rect`, `polyline`,
@@ -69,11 +70,15 @@ vérifie fichier par fichier, et la CI refuse une icône qui s'en écarte.
 
 ## Ajouter une icône
 
-**Dessinée ici :** déposer `resources/svg/<nom>.svg` en suivant la règle, puis
-lancer `composer test` et `composer catalogue` pour la regarder à 16, 24 et 40 px.
+Toute icône se déclare dans `outils/sources.php`, sous son thème : c'est ce
+qui range le catalogue. Un SVG non déclaré fait échouer les tests.
 
-**Empruntée à Lucide :** ajouter `'<nom-francais>' => '<nom-lucide>'` dans
-`outils/sources.php`, puis relancer l'import :
+**Dessinée ici :** déposer `resources/svg/<nom>.svg` en suivant la règle, et
+déclarer `'<nom>' => 'ici'`. Lancer ensuite `composer test` et
+`composer catalogue` pour la regarder à 16, 24 et 40 px.
+
+**Empruntée à Lucide :** déclarer `'<nom-francais>' => 'lucide:<nom-lucide>'`,
+puis relancer l'import :
 
 ```bash
 mkdir /tmp/sources && cd /tmp/sources

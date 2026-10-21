@@ -44,6 +44,37 @@ class SvgTest extends TestCase
         $this->assertGreaterThan(50, count(IconesServiceProvider::noms()));
     }
 
+    /** @return list<string> tous les noms déclarés, thème par thème, doublons compris */
+    private function nomsDeclares(): array
+    {
+        $noms = [];
+        foreach (require dirname(__DIR__).'/outils/sources.php' as $icones) {
+            array_push($noms, ...array_keys($icones));
+        }
+
+        return $noms;
+    }
+
+    /**
+     * Un SVG déposé sans être rangé n'apparaîtrait pas au catalogue ; un nom rangé
+     * sans fichier promettrait une icône qui casse la page à l'affichage.
+     */
+    public function test_chaque_icone_est_rangee_et_chaque_nom_range_existe(): void
+    {
+        $declares = array_unique($this->nomsDeclares());
+        sort($declares);
+
+        $this->assertSame([], array_values(array_diff(IconesServiceProvider::noms(), $declares)), 'Fichiers non rangés dans outils/sources.php');
+        $this->assertSame([], array_values(array_diff($declares, IconesServiceProvider::noms())), 'Noms rangés sans fichier SVG');
+    }
+
+    public function test_un_nom_ne_figure_que_dans_un_theme(): void
+    {
+        $doublons = array_keys(array_filter(array_count_values($this->nomsDeclares()), fn ($n) => $n > 1));
+
+        $this->assertSame([], $doublons);
+    }
+
     #[DataProvider('icones')]
     public function test_le_nom_est_en_minuscules_et_tirets(string $nom): void
     {
@@ -78,7 +109,13 @@ class SvgTest extends TestCase
         }
 
         foreach ($svg->getElementsByTagName('*') as $element) {
-            foreach (['fill', 'stroke', 'color', 'style', 'stroke-width'] as $attribut) {
+            // Un petit point plein dans une icône au trait (l'œil de l'étiquette chez
+            // Lucide) : permis, tant qu'il garde la couleur du texte.
+            if ($element->hasAttribute('fill')) {
+                $this->assertSame('currentColor', $element->getAttribute('fill'), "{$nom} : <{$element->tagName}> a une couleur en dur");
+            }
+
+            foreach (['stroke', 'color', 'style', 'stroke-width'] as $attribut) {
                 $this->assertFalse(
                     $element->hasAttribute($attribut),
                     "{$nom} : <{$element->tagName}> redéfinit « {$attribut} »",
