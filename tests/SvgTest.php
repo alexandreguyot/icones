@@ -4,6 +4,7 @@ namespace AlexandreGuyot\Icones\Tests;
 
 use AlexandreGuyot\Icones\IconesServiceProvider;
 use DOMDocument;
+use DOMElement;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -124,16 +125,68 @@ class SvgTest extends TestCase
         }
     }
 
+    /** @return list<string> ce que la règle refuse dans ce SVG */
+    private static function refus(DOMElement $svg): array
+    {
+        $permis = ['path', 'circle', 'line', 'rect', 'polyline', 'polygon', 'ellipse', 'g'];
+        $racine = ['viewBox', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin'];
+        $refus = [];
+
+        foreach ($svg->attributes as $attribut) {
+            if (! in_array($attribut->name, $racine, true)) {
+                $refus[] = "<svg> {$attribut->name}";
+            }
+        }
+
+        foreach ($svg->getElementsByTagName('*') as $element) {
+            if (! in_array($element->tagName, $permis, true)) {
+                $refus[] = "<{$element->tagName}>";
+            }
+
+            foreach ($element->attributes as $attribut) {
+                if (preg_match('/^(on|href|xlink)/i', $attribut->name)) {
+                    $refus[] = "<{$element->tagName}> {$attribut->name}";
+                }
+            }
+        }
+
+        return $refus;
+    }
+
     #[DataProvider('icones')]
     public function test_rien_qui_s_execute_ni_ne_charge(string $nom): void
     {
-        $permis = ['path', 'circle', 'line', 'rect', 'polyline', 'polygon', 'ellipse', 'g'];
+        $this->assertSame([], self::refus($this->charger($nom)->documentElement), $nom);
+    }
 
-        foreach ($this->charger($nom)->documentElement->getElementsByTagName('*') as $element) {
-            $this->assertContains($element->tagName, $permis, "{$nom} : <{$element->tagName}> interdit");
+    /** @return array<string,array{string}> */
+    public static function piegesSurLaRacine(): array
+    {
+        return [
+            'onload' => ['onload="alert(1)"'],
+            'onload en majuscules' => ['ONLOAD="alert(1)"'],
+            'style' => ['style="color:red"'],
+            'color' => ['color="red"'],
+            'href' => ['href="https://exemple.test"'],
+        ];
+    }
 
-            foreach ($element->attributes as $attribut) {
-                $this->assertDoesNotMatchRegularExpression('/^(on|href|xlink)/i', $attribut->name, $nom);
+    /** `getElementsByTagName` ne rend que les descendants : la balise <svg> se vérifie à part. */
+    #[DataProvider('piegesSurLaRacine')]
+    public function test_un_piege_sur_la_balise_svg_est_refuse(string $attribut): void
+    {
+        $dom = new DOMDocument;
+        $dom->loadXML("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"currentColor\" {$attribut}><path d=\"M0 0\"/></svg>");
+
+        $this->assertNotSame([], self::refus($dom->documentElement));
+    }
+
+    /** Une faute de frappe (`lucid:x`) serait ignorée par l'import, puis ferait planter le catalogue. */
+    public function test_chaque_origine_est_ici_ou_une_source_connue(): void
+    {
+        foreach (require dirname(__DIR__).'/outils/sources.php' as $icones) {
+            foreach ($icones as $nom => $origine) {
+                $this->assertMatchesRegularExpression('/^(ici|(lucide|simple-icons):[a-z0-9-]+)$/', $origine, $nom);
             }
         }
     }

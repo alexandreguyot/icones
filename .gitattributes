@@ -1,0 +1,9 @@
+/.gitattributes export-ignore
+/.github export-ignore
+/.gitignore export-ignore
+/outils/catalogue.php export-ignore
+/outils/importer.php export-ignore
+/outils/synonymes.php export-ignore
+/outils/versions.php export-ignore
+/phpunit.xml export-ignore
+/tests export-ignore
