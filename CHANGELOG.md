@@ -10,7 +10,7 @@
 | `valide` | `succes` |
 | `camera` | `filmer` |
 
-Laravel 10 n'est plus pris en charge : il n'était pas testé.
+Laravel 10 et 11 ne sont plus pris en charge : ils ne reçoivent plus de correctifs de sécurité, et Composer 2.9+ refuse d'installer Laravel 11.
 
 ### Ajouts
 
