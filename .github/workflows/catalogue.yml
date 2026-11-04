@@ -1,0 +1,32 @@
+name: Catalogue
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: php outils/catalogue.php
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: catalogue
+      - id: deploiement
+        uses: actions/deploy-pages@v4

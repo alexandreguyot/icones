@@ -25,6 +25,9 @@ Le fournisseur de service s'enregistre tout seul. Les icônes passent par
 [Blade Icons](https://github.com/blade-ui-kit/blade-icons) : cache, attributs
 et composants viennent de là.
 
+En production, ajouter `php artisan icons:cache` au déploiement : sans ce
+manifeste, Blade Icons relit le dossier des SVG au lieu de le trouver en cache.
+
 ## Utiliser
 
 ```blade
@@ -39,16 +42,23 @@ et composants viennent de là.
   d'écran. Mets `aria-label` sur le bouton qui la porte, et `aria-hidden="true"`
   sur l'icône.
 
+`chargement` ne tourne pas tout seul : `<x-ico-chargement class="h-5 w-5 animate-spin" />`.
+
 Pour lister les icônes depuis un projet : `IconesServiceProvider::noms()`.
 
 ## Le catalogue
+
+En ligne : <https://alexandreguyot.github.io/icones/>, republié à chaque tag.
+En local :
 
 ```bash
 composer catalogue      # → catalogue/index.html
 ```
 
-Une page avec recherche (nom français ou nom Lucide), filtre par origine et
-choix de la taille. Un clic copie le composant.
+Une page avec recherche (nom français, ce que l'icône montre, ou nom Lucide),
+filtre par origine et choix de la taille. Un clic copie le composant. La
+recherche ignore les accents ; les mots voisins vivent dans
+`outils/synonymes.php`.
 
 ## Règle de dessin
 
@@ -82,18 +92,21 @@ puis relancer l'import :
 
 ```bash
 mkdir /tmp/sources && cd /tmp/sources
-npm pack lucide-static simple-icons && for f in *.tgz; do mkdir "${f%.tgz}" && tar xzf "$f" -C "${f%.tgz}"; done
+npm pack lucide-static@1.61.0 simple-icons@16.35.0 && for f in *.tgz; do mkdir "${f%.tgz}" && tar xzf "$f" -C "${f%.tgz}"; done
 cd - && php outils/importer.php /tmp/sources/lucide-static-*/package/icons /tmp/sources/simple-icons-*/package/icons
 ```
 
-L'import réécrit toutes les icônes empruntées, ce qui fait aussi suivre les
-retouches de Lucide. Il ne touche jamais aux icônes dessinées ici.
+L'import réécrit toutes les icônes empruntées et ne touche jamais aux icônes
+dessinées ici. Les versions sont figées dans `outils/versions.php` et l'import
+refuse les autres. Pour suivre les retouches de Lucide : monter la version là
+et dans `LICENCES-TIERCES.md`, relancer l'import, relire le diff.
 
 ## Versions
 
-Un tag par livraison (`v0.2.0`…). Ajouter une icône, c'est une version
-mineure. Renommer ou supprimer une icône casse les projets qui l'utilisent :
-c'est une version majeure.
+Un tag par livraison (`v0.3.0`…), détaillé dans [CHANGELOG.md](CHANGELOG.md).
+Ajouter une icône, c'est une version mineure. Renommer ou supprimer une icône
+casse les projets qui l'utilisent : c'est une version majeure, ou une mineure
+tant qu'on est en `0.x`, puisque `^0.2` n'accepte pas `0.3`.
 
 ## Licences
 

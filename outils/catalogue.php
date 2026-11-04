@@ -3,7 +3,7 @@
 /**
  * Fabrique le catalogue des icônes : une page HTML autonome, sans dépendance.
  *
- *     php outils/catalogue.php
+ *     php outils/catalogue.php [dossier de sortie, catalogue/ par défaut]
  *
  *   catalogue/index.html    à ouvrir dans le navigateur (document complet)
  *   catalogue/fragment.html la même page sans squelette, pour une publication
@@ -14,7 +14,9 @@
  */
 
 $racine = dirname(__DIR__);
+$sortie = $argv[1] ?? "{$racine}/catalogue";
 $sources = require __DIR__.'/sources.php';
+$synonymes = require __DIR__.'/synonymes.php';
 $version = trim((string) @shell_exec('git -C '.escapeshellarg($racine).' describe --tags --always 2>/dev/null')) ?: 'dev';
 
 $compte = ['ici' => 0, 'lucide' => 0, 'marque' => 0];
@@ -33,7 +35,7 @@ foreach ($sources as $theme => $icones) {
         $compte[$source]++;
 
         $svg = preg_replace('/^<svg /', '<svg aria-hidden="true" ', trim((string) file_get_contents($fichier)));
-        $cles = htmlspecialchars(trim("{$nom} {$sous}"), ENT_QUOTES);
+        $cles = htmlspecialchars(trim("{$nom} {$sous} ".implode(' ', $synonymes[$nom] ?? [])), ENT_QUOTES);
         $titre = $sous !== '' ? " title=\"{$sous}\"" : '';
 
         $tuiles .= "<button type=\"button\" class=\"tuile\" data-nom=\"{$nom}\" data-source=\"{$source}\" data-cles=\"{$cles}\"{$titre}>"
@@ -46,11 +48,8 @@ foreach ($sources as $theme => $icones) {
 
 $total = array_sum($compte);
 
-$page = <<<HTML
+$tete = <<<HTML
 <title>Icônes Alexandre</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 /* Une planche de contact : barre d'outils collante, puis des grilles de tuiles égales par origine. */
 :root {
@@ -61,9 +60,9 @@ $page = <<<HTML
   --filet: #e3dfd8;
   --accent: #c9531f;
   --accent-doux: #fbe9df;
-  --titre: "Anton", "Impact", "Arial Narrow", sans-serif;
-  --texte: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --code: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --titre: "Impact", "Arial Narrow", sans-serif;
+  --texte: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --code: ui-monospace, "SFMono-Regular", Menlo, monospace;
   --taille: 24px;
 }
 @media (prefers-color-scheme: dark) {
@@ -77,6 +76,7 @@ $page = <<<HTML
   --filet: #34312c; --accent: #f07a45; --accent-doux: #3a2419; color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   margin: 0; background: var(--fond); color: var(--encre);
   font: 15px/1.5 var(--texte);
@@ -149,7 +149,9 @@ h2 { font: 400 22px/1.1 var(--titre); text-transform: uppercase; letter-spacing:
 }
 @media (prefers-reduced-motion: reduce) { .tuile { transition: none; } }
 </style>
+HTML;
 
+$corps = <<<HTML
 <main class="cadre">
   <div class="entete">
     <h1>Icônes</h1>
@@ -164,7 +166,7 @@ h2 { font: 400 22px/1.1 var(--titre); text-transform: uppercase; letter-spacing:
 
   <div class="outils" role="search">
     <label for="recherche" hidden>Chercher une icône</label>
-    <input id="recherche" type="search" placeholder="Chercher (calendrier, trash, ballon…)" autocomplete="off">
+    <input id="recherche" type="search" placeholder="Chercher (calendrier, poubelle, ballon…)" autocomplete="off">
     <div class="puces" role="group" aria-label="Origine">
       <button type="button" class="puce" data-filtre="" aria-pressed="true">Toutes</button>
       <button type="button" class="puce" data-filtre="ici" aria-pressed="false">Dessinées ici {$compte['ici']}</button>
@@ -179,7 +181,7 @@ h2 { font: 400 22px/1.1 var(--titre); text-transform: uppercase; letter-spacing:
   </div>
 
   {$sections}
-  <p class="vide" hidden>Aucune icône ne porte ce nom. Le nom d'origine Lucide marche aussi (trash, house…).</p>
+  <p class="vide" hidden>Aucune icône ne porte ce nom. Ce qu'elle montre marche aussi (poubelle, maison…), comme le nom d'origine Lucide (trash, house…).</p>
 </main>
 <div class="toast" role="status" hidden></div>
 
@@ -191,9 +193,10 @@ h2 { font: 400 22px/1.1 var(--titre); text-transform: uppercase; letter-spacing:
   const vide = document.querySelector('.vide');
   const toast = document.querySelector('.toast');
   let filtre = '';
+  const sansAccent = texte => texte.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/œ/g, 'oe').toLowerCase();
 
   const appliquer = () => {
-    const q = champ.value.trim().toLowerCase();
+    const q = sansAccent(champ.value.trim());
     let visibles = 0;
     groupes.forEach(g => {
       let n = 0;
@@ -246,13 +249,13 @@ h2 { font: 400 22px/1.1 var(--titre); text-transform: uppercase; letter-spacing:
 </script>
 HTML;
 
-@mkdir("{$racine}/catalogue");
-file_put_contents("{$racine}/catalogue/fragment.html", $page."\n");
+@mkdir($sortie);
+file_put_contents("{$sortie}/fragment.html", "{$tete}\n\n{$corps}\n");
 file_put_contents(
-    "{$racine}/catalogue/index.html",
+    "{$sortie}/index.html",
     "<!doctype html>\n<html lang=\"fr\">\n<head>\n<meta charset=\"utf-8\">\n"
     ."<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n"
-    ."</head>\n<body>\n{$page}\n</body>\n</html>\n",
+    ."{$tete}\n</head>\n<body>\n{$corps}\n</body>\n</html>\n",
 );
 
 echo "Catalogue : {$total} icônes ({$compte['ici']} ici, {$compte['lucide']} Lucide, {$compte['marque']} marques).\n";

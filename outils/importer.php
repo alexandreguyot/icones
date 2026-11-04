@@ -3,12 +3,14 @@
 /**
  * Importe les icônes empruntées, sous leur nom français, au format maison.
  *
- *     npm pack lucide-static simple-icons && tar xzf …   (dans un dossier à part)
+ *     npm pack lucide-static@<version> simple-icons@<version> && tar xzf …   (dans un dossier à part)
  *     php outils/importer.php <lucide-static/icons> <simple-icons/icons>
  *
  * Le format maison tient sur quelques lignes, un élément par ligne : un diff
  * d'icône se relit. Ni classe, ni largeur, ni hauteur — c'est le projet qui
  * dimensionne, par ses classes — et la couleur est toujours `currentColor`.
+ *
+ * Les versions sont figées dans `outils/versions.php` : l'import refuse les autres.
  */
 
 [$script, $dossierLucide, $dossierMarques] = $argv + [null, null, null];
@@ -18,12 +20,27 @@ if (! is_dir((string) $dossierLucide) || ! is_dir((string) $dossierMarques)) {
     exit(1);
 }
 
+foreach (require __DIR__.'/versions.php' as $source => $version) {
+    $dossier = $source === 'lucide' ? $dossierLucide : $dossierMarques;
+    $paquet = json_decode((string) @file_get_contents(dirname($dossier).'/package.json'), true);
+
+    if (($paquet['version'] ?? null) !== $version) {
+        fwrite(STDERR, "{$source} : version ".($paquet['version'] ?? 'inconnue')." reçue, {$version} attendue (outils/versions.php).\n");
+        exit(1);
+    }
+}
+
 // Le thème ne sert qu'au catalogue : ici, seule l'origine compte.
 $sources = ['lucide' => [], 'simple-icons' => []];
 foreach (require __DIR__.'/sources.php' as $icones) {
     foreach ($icones as $nom => $origine) {
         if ($origine !== 'ici') {
-            [$chez, $sous] = explode(':', $origine, 2);
+            [$chez, $sous] = array_pad(explode(':', $origine, 2), 2, '');
+            if (! isset($sources[$chez])) {
+                fwrite(STDERR, "{$nom} : origine inconnue « {$origine} ».\n");
+                exit(1);
+            }
+
             $sources[$chez][$nom] = $sous;
         }
     }
